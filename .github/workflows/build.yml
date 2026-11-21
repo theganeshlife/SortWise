@@ -1,0 +1,130 @@
+name: Build
+run-name: SortWise 1.0.0
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**", "LICENSE"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  APP_VERSION: "1.0.0"
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.b.outputs.build }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: b
+        name: Build number (time of the latest push, Sydney time, HHMMDDMMYYYY)
+        run: echo "build=$(TZ=Australia/Sydney git log -1 --format=%cd --date=format-local:%H%M%d%m%Y)" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: meta
+    runs-on: windows-latest
+    env:
+      APP_BUILD: ${{ needs.meta.outputs.build }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: pip install pyinstaller pystray pillow pypdf certifi
+      - name: Stamp build number
+        shell: bash
+        run: printf '%s' "$APP_BUILD" > build.txt
+      - name: Build app folder
+        run: pyinstaller --noconfirm --windowed --name SortWise --icon assets/sortwise.ico --add-data "ui.html;." --add-data "build.txt;." --add-data "assets/icon.png;assets" sortwise.py
+      - name: Build portable exe
+        run: pyinstaller --noconfirm --onefile --windowed --name SortWise-portable --icon assets/sortwise.ico --add-data "ui.html;." --add-data "build.txt;." --add-data "assets/icon.png;assets" --distpath dist-portable sortwise.py
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\SortWise\SortWise.exe -ArgumentList "--background" -PassThru
+          Start-Sleep -Seconds 8
+          $r = Invoke-RestMethod http://127.0.0.1:8765/api/hello
+          if ($r.build -ne $env:APP_BUILD) { throw "SortWise did not start with build $env:APP_BUILD" }
+          Stop-Process -Id $p.Id -Force
+      - name: Build installer
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\sortwise.iss
+      - uses: actions/upload-artifact@v7
+        with:
+          name: SortWise-Windows
+          path: |
+            dist/SortWiseSetup-*.exe
+            dist-portable/SortWise-portable.exe
+
+  mac:
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-26
+            arch: apple-silicon
+          - runner: macos-26-intel
+            arch: intel
+    runs-on: ${{ matrix.runner }}
+    env:
+      APP_BUILD: ${{ needs.meta.outputs.build }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: pip install pyinstaller pystray pillow pypdf certifi
+      - name: Build SortWise.app
+        run: |
+          printf '%s' "$APP_BUILD" > build.txt
+          pyinstaller --noconfirm --windowed --name SortWise --icon assets/sortwise.icns \
+            --osx-bundle-identifier com.theganeshlife.sortwise \
+            --add-data "ui.html:." --add-data "build.txt:." --add-data "assets/icon.png:assets" sortwise.py
+          plutil -replace LSUIElement -bool true dist/SortWise.app/Contents/Info.plist
+          plutil -replace CFBundleShortVersionString -string "$APP_VERSION" dist/SortWise.app/Contents/Info.plist
+          plutil -replace CFBundleVersion -string "$APP_BUILD" dist/SortWise.app/Contents/Info.plist
+          plutil -replace NSHumanReadableCopyright -string "SortWise by Claude and Ganesh Acharya" dist/SortWise.app/Contents/Info.plist
+          codesign --force --deep --sign - dist/SortWise.app
+      - name: Smoke test
+        run: |
+          dist/SortWise.app/Contents/MacOS/SortWise --background --no-tray &
+          sleep 10
+          curl -fsS http://127.0.0.1:8765/api/hello | grep -q "\"build\": \"$APP_BUILD\""
+          kill %1 || true
+      - name: Make disk image
+        run: |
+          mkdir dmg && cp -R dist/SortWise.app dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "SortWise" -srcfolder dmg -ov -format UDZO "SortWise-${APP_VERSION}-mac-${{ matrix.arch }}.dmg"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: SortWise-Mac-${{ matrix.arch }}
+          path: SortWise-*.dmg
+
+  release:
+    needs: [meta, windows, mac]
+    runs-on: ubuntu-latest
+    env:
+      APP_BUILD: ${{ needs.meta.outputs.build }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish release
+        run: |
+          find out -type f -name "SortWise-portable.exe" -execdir mv {} "SortWise-${APP_VERSION}-portable.exe" \;
+          files=$(find out -type f \( -name "*.exe" -o -name "*.dmg" \))
+          { cat installer/release-notes.md; printf '\nBuild: %s\n' "$APP_BUILD"; } > notes.md
+          gh release delete "v${APP_VERSION}" --cleanup-tag -y || true
+          sleep 3
+          gh release create "v${APP_VERSION}" $files --title "SortWise ${APP_VERSION}" --notes-file notes.md --target "${GITHUB_SHA}" --latest

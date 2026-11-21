@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SortWise</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1E5B4F">
+<style>
+:root{
+  --desk:#E4E9F0; --desk-dot:#d3dae5; --side:#F4F6F9; --paper:#FFFFFF; --ink:#172033; --muted:#5E6A7D; --faint:#8C97A8;
+  --line:#D2D9E3; --go:#1E5B4F; --go-ink:#fff; --go-soft:#DCEDE7; --warn:#A4561B; --warn-soft:#FBEBDD; --bad:#B5302A; --bad-soft:#FBE3E1;
+  --shadow:0 1px 0 rgba(23,32,51,.06), 0 6px 18px -10px rgba(23,32,51,.35);
+  --display:"Bahnschrift","DIN Alternate","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --text:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --desk:#141920; --desk-dot:#1d242e; --side:#1A2029; --paper:#222a35; --ink:#E6EBF2; --muted:#A3AEBE; --faint:#7A8698;
+  --line:#2D3643; --go:#5CC8A8; --go-ink:#0E2A23; --go-soft:#1B3530; --warn:#F0A766; --warn-soft:#3A2919; --bad:#FF8A80; --bad-soft:#3B201E;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 8px 20px -10px rgba(0,0,0,.7);}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:14px/1.45 var(--text);color:var(--ink);background:var(--desk);display:grid;grid-template-columns:272px 1fr;overflow:hidden}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--go);outline-offset:2px;border-radius:6px}
+input,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+input:focus,textarea:focus{outline:none;border-color:var(--go);box-shadow:0 0 0 3px var(--go-soft)}
+
+/* ---------- sidebar ---------- */
+aside{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 14px 14px;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 22px;font:600 22px/1 var(--display);letter-spacing:.01em}
+.brand svg{flex:none}
+.side-h{font-size:12.5px;color:var(--faint);padding:0 10px 6px}
+.fl{display:flex;flex-direction:column;gap:2px}
+.fitem{width:100%;padding-right:34px!important;display:grid;grid-template-columns:28px 1fr;gap:2px 10px;align-items:center;text-align:left;border:0;background:none;padding:9px 10px;border-radius:10px;cursor:pointer}
+.fitem:hover{background:color-mix(in srgb,var(--line) 45%,transparent)}
+.fitem.on{background:var(--paper);box-shadow:inset 3px 0 0 var(--go),var(--shadow)}
+.fitem .ic{grid-row:span 2;width:28px;height:22px}
+.fitem b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fitem small{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+.fitem small.messy{color:var(--warn)}
+.fwrap{position:relative}
+.fwrap .dc{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:7px;border:0;background:none;color:var(--faint);cursor:pointer;opacity:0;display:grid;place-items:center}
+.fwrap:hover .dc,.fwrap .dc:focus-visible{opacity:1}
+.fwrap .dc:hover{background:var(--bad-soft);color:var(--bad)}
+.dupbar{position:sticky;top:0;z-index:6;margin:0 -40px 18px;padding:14px 40px;background:color-mix(in srgb,var(--desk) 92%,transparent);backdrop-filter:blur(6px);display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid transparent}
+.dupbar.stuck{border-bottom-color:var(--line);box-shadow:0 8px 16px -14px rgba(0,0,0,.4)}
+.dupbar .chips{flex:1}
+.about{max-width:640px}
+.about .mark{display:flex;gap:18px;align-items:center;margin-bottom:22px}
+.about .mark h1{font:600 44px/1 var(--display);margin:0}
+.about .ver{font:600 13px var(--display);color:var(--go);background:var(--go-soft);border-radius:99px;padding:3px 10px;display:inline-block;margin-top:8px}
+.links{display:grid;gap:10px;margin-top:18px}
+.upd{background:var(--paper);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin:22px 0 4px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center}
+.upd b{font:600 16px var(--display)}
+.upd .hint{grid-column:1}
+.upd .progress{grid-column:1/-1;margin-top:6px}
+.upd.new{border-left:4px solid var(--go)}
+.lnk{display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center;background:var(--paper);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);cursor:pointer;border:0;text-align:left}
+.lnk:hover{box-shadow:0 14px 28px -16px rgba(23,32,51,.5)}
+.lnk .ico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font:700 16px var(--display);color:#fff}
+.lnk small{display:block;color:var(--faint);font-size:12.5px}
+.lnk .go{color:var(--faint)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--go);box-shadow:0 0 0 0 var(--go);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--go) 60%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.connect{margin:10px 4px 0;border:1.5px dashed var(--line);background:none;border-radius:10px;padding:10px;color:var(--muted);cursor:pointer;text-align:left;display:flex;gap:8px;align-items:center}
+.connect:hover{border-color:var(--go);color:var(--go)}
+.side-foot{margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:2px}
+.navb{display:flex;justify-content:space-between;align-items:center;border:0;background:none;text-align:left;padding:8px 10px;border-radius:9px;cursor:pointer;color:var(--muted)}
+.navb:hover{background:color-mix(in srgb,var(--line) 45%,transparent);color:var(--ink)}
+.navb.on{color:var(--ink);background:var(--paper);box-shadow:inset 3px 0 0 var(--go),var(--shadow);font-weight:600}
+.navb.home{color:var(--ink);margin:0 0 14px;display:flex;justify-content:flex-start;gap:10px}
+.navb.home svg{flex:none}
+.brand{cursor:pointer}
+.hello{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin:6px 0 26px}
+.hello h1{font:600 40px/1.05 var(--display);margin:0}
+.hello p{margin:8px 0 0;color:var(--muted);font-size:15px}
+.hello .search{margin-left:auto;min-width:320px;max-width:420px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:8px}
+.tile{background:var(--paper);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;text-align:left;border:0;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:112px}
+.tile:hover{box-shadow:0 14px 28px -16px rgba(23,32,51,.5)}
+.tile .lbl{color:var(--muted);font-size:13px}
+.tile b{font:600 34px/1.1 var(--display);margin-top:4px}
+.tile small{color:var(--faint);font-size:12.5px;margin-top:auto}
+.tile.warn b{color:var(--warn)}
+.tile.go b{color:var(--go)}
+.fcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.fcard{background:var(--paper);border-radius:16px;box-shadow:var(--shadow);padding:16px;display:grid;grid-template-columns:44px 1fr;gap:4px 14px;align-items:start}
+.fcard .ic{width:44px;height:36px;grid-row:span 3}
+.fcard h3{margin:0;font:600 17px var(--display);word-break:break-word}
+.fcard .where{color:var(--faint);font-size:12px;word-break:break-all}
+.fcard .st{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;margin-top:4px}
+.fcard .st.messy{color:var(--warn)}
+.fcard .row{grid-column:1/-1;margin-top:12px}
+.recent{background:var(--paper);border-radius:16px;box-shadow:var(--shadow);padding:6px 16px}
+.recent .r{display:grid;grid-template-columns:1fr auto;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.recent .r:last-child{border-bottom:0}
+.recent small{color:var(--faint)}
+.navb .n{font:600 12px var(--display);background:var(--warn-soft);color:var(--warn);border-radius:99px;padding:2px 8px}
+.scanline{font-size:11.5px;color:var(--faint);padding:10px 10px 0;min-height:24px}
+
+/* ---------- main ---------- */
+main{overflow:auto;position:relative;background-image:radial-gradient(var(--desk-dot) 1px,transparent 1px);background-size:22px 22px}
+.view{display:none;padding:26px 40px 80px;max-width:1360px}
+.view.on{display:block}
+.top{display:flex;gap:14px;align-items:center;margin-bottom:22px}
+.search{flex:1;position:relative;max-width:620px}
+.search input{width:100%;padding:11px 14px 11px 40px;border-radius:12px;background:var(--paper);box-shadow:var(--shadow);border-color:transparent}
+.search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--faint)}
+.scope{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.crumbs{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:20px}
+.crumbs a{color:var(--muted);text-decoration:none;cursor:pointer}
+.crumbs a:hover{color:var(--ink);text-decoration:underline}
+.head{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin:4px 0 26px}
+.head h1{font:600 40px/1.05 var(--display);margin:0;letter-spacing:-.005em;word-break:break-word}
+.head .where{color:var(--faint);font-size:12.5px;margin-top:6px;word-break:break-all}
+.head .acts{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--paper);padding:8px 14px;border-radius:10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:7px;align-items:center}
+.btn:hover{border-color:var(--faint)}
+.btn.go{background:var(--go);color:var(--go-ink);border-color:var(--go);font-weight:600}
+.btn.go:hover{filter:brightness(1.07)}
+.btn.big{padding:12px 22px;font-size:15px;border-radius:12px;box-shadow:0 10px 24px -12px var(--go)}
+.btn.bad{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:600}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:color-mix(in srgb,var(--line) 45%,transparent)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:8px}
+.switch{display:inline-flex;align-items:center;gap:9px;cursor:pointer;color:var(--muted);font-size:13px;user-select:none}
+.switch input{display:none}
+.switch i{width:34px;height:20px;border-radius:99px;background:var(--line);position:relative;transition:background .2s}
+.switch i::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked+i{background:var(--go)}
+.switch input:checked+i::after{transform:translateX(14px)}
+.sec-h{display:flex;align-items:baseline;gap:10px;margin:30px 0 14px}
+.sec-h h2{font:600 17px var(--display);margin:0}
+.sec-h span{color:var(--faint);font-size:13px}
+
+/* ---------- folders (the shelf) ---------- */
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:26px 18px}
+.folder{--c:#C2A36B;position:relative;height:132px;cursor:pointer;border:0;background:none;padding:0;text-align:left}
+.folder .tab{position:absolute;left:0;top:8px;width:46%;height:22px;background:color-mix(in srgb,var(--c) 78%,#000 10%);border-radius:9px 12px 0 0}
+.folder .peek{position:absolute;left:12px;right:12px;top:14px;height:60px;display:flex;justify-content:center}
+.folder .peek .p{width:58%;height:60px;background:var(--paper);border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.05);position:absolute;top:0;background-size:cover;background-position:center}
+.folder .peek .p:nth-child(1){transform:rotate(-7deg) translateX(-22%)}
+.folder .peek .p:nth-child(2){transform:rotate(4deg) translateX(18%) translateY(2px)}
+.folder .peek .p:nth-child(3){transform:rotate(-1deg) translateY(4px)}
+.folder .body{position:absolute;left:0;right:0;bottom:0;top:28px;background:var(--c);border-radius:4px 12px 12px 12px;padding:14px 12px 10px;display:flex;flex-direction:column;justify-content:flex-end;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 10px 18px -12px color-mix(in srgb,var(--c) 70%,#000)}
+.folder .name{font:600 14.5px/1.15 var(--display);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.18);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.folder .meta{font-size:11.5px;color:rgba(255,255,255,.88);margin-top:3px;display:flex;justify-content:space-between;gap:6px}
+.folder .count{font:600 12px var(--display)}
+.folder .subs{display:flex;gap:4px;overflow:hidden;margin-bottom:6px;flex:none}
+.folder .subs span{font-size:10.5px;background:rgba(255,255,255,.26);color:#fff;border-radius:5px;padding:1px 6px;white-space:nowrap;flex:none;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.folder:hover .body{filter:brightness(1.05)}
+.folder:hover .peek{transform:translateY(-4px)}
+.folder .peek{transition:transform .2s}
+.folder.generic .body{background:repeating-linear-gradient(135deg,var(--c),var(--c) 10px,color-mix(in srgb,var(--c) 88%,#fff) 10px,color-mix(in srgb,var(--c) 88%,#fff) 20px)}
+.folder.fresh{animation:drop .45s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes drop{from{opacity:0;transform:translateY(-18px) scale(.9)}to{opacity:1;transform:none}}
+.folder.bump .body{animation:bump .28s ease}
+@keyframes bump{50%{transform:scale(1.06)}}
+.folder .newtag{position:absolute;right:8px;top:0;font-size:10.5px;font-weight:600;background:var(--paper);color:var(--go);border-radius:99px;padding:1px 8px;box-shadow:var(--shadow)}
+
+/* ---------- loose files (the desk) ---------- */
+.desk{display:flex;flex-wrap:wrap;gap:16px 14px;padding:6px 2px}
+.slip{width:146px;background:var(--paper);border-radius:6px;box-shadow:var(--shadow);cursor:pointer;border:0;padding:0;text-align:left;position:relative;
+  transition:transform .35s cubic-bezier(.3,1.3,.5,1),box-shadow .2s}
+.desk.messy .slip{transform:rotate(var(--r)) translate(var(--dx),var(--dy))}
+.slip:hover{transform:rotate(0) translateY(-3px)!important;box-shadow:0 14px 28px -14px rgba(23,32,51,.5);z-index:2}
+.slip .th{height:96px;border-radius:6px 6px 0 0;background:color-mix(in srgb,var(--c) 14%,var(--paper));display:grid;place-items:center;overflow:hidden;position:relative}
+.slip .th img{width:100%;height:100%;object-fit:cover}
+.slip .ext{font:600 15px var(--display);color:var(--c);letter-spacing:.02em}
+.slip .lines{position:absolute;inset:16px 22px auto;display:grid;gap:6px}
+.slip .lines i{height:4px;border-radius:2px;background:color-mix(in srgb,var(--c) 26%,transparent)}
+.slip .lines i:nth-child(2){width:80%}.slip .lines i:nth-child(3){width:90%}.slip .lines i:nth-child(4){width:55%}
+.slip .lines + .ext{position:absolute;bottom:8px;right:10px;font-size:12px}
+.slip .nm{margin:8px 10px 10px;font-size:12.5px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;height:2.6em}
+.slip .cl{position:absolute;top:6px;right:6px;background:var(--paper);border-radius:99px;font-size:10px;padding:1px 6px;color:var(--muted);box-shadow:var(--shadow)}
+.slip.dim{opacity:.2;transform:scale(.9)!important}
+.flyer{position:fixed;z-index:50;pointer-events:none;transition:transform .62s cubic-bezier(.55,0,.25,1),opacity .62s ease-in;will-change:transform}
+.empty-desk{border:1.5px dashed var(--line);border-radius:14px;padding:26px;color:var(--muted);text-align:center}
+
+/* ---------- banners ---------- */
+.banner{display:flex;gap:16px;align-items:center;background:var(--paper);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:8px;border-left:4px solid var(--go)}
+.banner.warn{border-left-color:var(--warn)}
+.banner b{font:600 16px var(--display)}
+.banner p{margin:2px 0 0;color:var(--muted)}
+.banner .grow{flex:1}
+.progress{height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}
+.progress i{display:block;height:100%;background:var(--go);width:0;transition:width .25s}
+
+/* ---------- drawer ---------- */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--side);border-left:1px solid var(--line);box-shadow:-20px 0 40px -30px rgba(0,0,0,.5);
+  transform:translateX(102%);transition:transform .28s cubic-bezier(.3,.9,.4,1);z-index:30;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer .pv{flex:none;height:300px;background:var(--desk);display:grid;place-items:center;overflow:hidden;position:relative}
+.drawer .pv img,.drawer .pv video{max-width:100%;max-height:100%}
+.drawer .pv iframe{width:100%;height:100%;border:0;background:#fff}
+.drawer .pv .doc{background:var(--paper);width:82%;height:86%;border-radius:4px;box-shadow:var(--shadow);padding:18px;font-size:11.5px;line-height:1.5;overflow:hidden;white-space:pre-wrap;color:var(--muted)}
+.drawer .info{padding:20px;overflow:auto}
+.drawer h3{font:600 19px/1.25 var(--display);margin:0 0 4px;word-break:break-word}
+.drawer .x{position:absolute;top:10px;right:10px;z-index:2;background:var(--paper);border:0;width:32px;height:32px;border-radius:50%;cursor:pointer;box-shadow:var(--shadow)}
+.kv{display:grid;grid-template-columns:90px 1fr;gap:6px 10px;font-size:13px;margin:14px 0}
+.kv dt{color:var(--faint)} .kv dd{margin:0;word-break:break-all}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- search ---------- */
+.res{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;cursor:pointer}
+.res:hover{background:var(--paper);box-shadow:var(--shadow)}
+.res .mini{width:44px;height:44px;border-radius:8px;background:color-mix(in srgb,var(--c) 16%,var(--paper));display:grid;place-items:center;font:600 11px var(--display);color:var(--c);overflow:hidden}
+.res .mini img{width:100%;height:100%;object-fit:cover}
+.res b{font-weight:600;word-break:break-word}
+.res .pth{font-size:12px;color:var(--faint)}
+.res .sn{font-size:12.5px;color:var(--muted);margin-top:2px}
+.res mark{background:color-mix(in srgb,var(--warn) 25%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;font-size:13px}
+.chip:hover{border-color:var(--go)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ---------- duplicates ---------- */
+.dgroup{background:var(--paper);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:18px}
+.dgroup .gh{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.dgroup .gh b{font:600 15px var(--display)}
+.dgroup .gh span{color:var(--faint);font-size:12.5px}
+.twins{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.twin{border:2px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,opacity .15s;background:var(--side)}
+.twin.keep{border-color:var(--go)}
+.twin.del{border-color:var(--bad);opacity:.8}
+.twin .pvw{height:210px;background:var(--desk);display:grid;place-items:center;position:relative;overflow:hidden}
+.twin .pvw img{width:100%;height:100%;object-fit:contain}
+.twin .pvw video{width:100%;height:100%;background:#000}
+.twin .pvw .doc{background:var(--paper);width:84%;height:86%;border-radius:3px;box-shadow:var(--shadow);padding:12px;font-size:10.5px;line-height:1.45;overflow:hidden;white-space:pre-wrap;color:var(--muted)}
+.twin .pvw .grid4{display:grid;grid-template-columns:1fr 1fr;gap:3px;width:100%;height:100%}
+.twin .pvw .grid4 div{background-size:cover;background-position:center;background-color:var(--line)}
+.twin .pvw .flist{width:86%;height:86%;background:var(--paper);border-radius:6px;padding:10px 12px;font-size:11.5px;overflow:hidden;color:var(--muted);box-shadow:var(--shadow)}
+.twin .stamp{position:absolute;top:10px;left:10px;font:700 13px var(--display);padding:3px 10px;border-radius:6px;letter-spacing:.04em}
+.twin.keep .stamp{background:var(--go);color:var(--go-ink)}
+.twin.del .stamp{background:var(--bad);color:#fff;transform:rotate(-6deg)}
+.twin .ti{padding:10px 12px 12px;font-size:12.5px;display:flex;flex-direction:column;gap:6px;flex:1}
+.twin .ti b{font-weight:600;word-break:break-word;font-size:13px}
+.twin .ti .pth{color:var(--faint);word-break:break-all;font-size:11.5px}
+.twin .choose{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto;padding-top:6px}
+.twin .choose button{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:6px;cursor:pointer;font-size:12.5px}
+.twin.keep .choose .k{background:var(--go);border-color:var(--go);color:var(--go-ink);font-weight:600}
+.twin.del .choose .d{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:600}
+.loadpv{border:1px dashed var(--faint);background:none;border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--muted)}
+
+/* ---------- activity ---------- */
+.act{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--paper);box-shadow:var(--shadow);margin-bottom:8px}
+.act .dot{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--go-soft);color:var(--go)}
+.act small{color:var(--faint)}
+
+/* ---------- modal & toast ---------- */
+dialog{border:0;border-radius:18px;padding:26px;background:var(--side);color:var(--ink);width:min(560px,94vw);box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
+dialog::backdrop{background:rgba(15,20,30,.45);backdrop-filter:blur(2px)}
+dialog h2{font:600 24px var(--display);margin:0 0 6px}
+dialog p{color:var(--muted);margin:0 0 18px}
+.toasts{position:fixed;left:288px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:60}
+.toast{background:var(--ink);color:var(--paper);padding:11px 14px;border-radius:12px;box-shadow:0 12px 30px -12px rgba(0,0,0,.5);display:flex;gap:12px;align-items:center;max-width:520px;animation:tin .3s ease}
+.toast button{background:none;border:1px solid color-mix(in srgb,var(--paper) 50%,transparent);color:inherit;border-radius:7px;padding:3px 9px;cursor:pointer;font-size:12.5px}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}}
+.hint{color:var(--muted);font-size:13px}
+.welcome{max-width:640px;margin:8vh auto 0;text-align:left}
+.welcome h1{font:600 46px/1.05 var(--display);margin:0 0 12px}
+.welcome p{color:var(--muted);font-size:16px;margin:0 0 26px;max-width:52ch}
+.settings-card{background:var(--paper);border-radius:14px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;max-width:720px}
+.settings-card h3{font:600 16px var(--display);margin:0 0 4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:820px){body{grid-template-columns:1fr}aside{display:none}.view{padding:20px}.toasts{left:16px}}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <svg width="30" height="26" viewBox="0 0 30 26" aria-hidden="true"><rect x="4" y="1" width="18" height="13" rx="2" fill="#B57BE0" transform="rotate(-8 13 7)"/><rect x="8" y="3" width="18" height="13" rx="2" fill="#6C8EF5" transform="rotate(6 17 9)"/><path d="M1 10h9l2 2h17v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" fill="#1E5B4F"/></svg>
+    SortWise
+  </div>
+  <button class="navb home" data-view="home"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7.5 8 2.5l6 5V14H10v-4H6v4H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Home</span></button>
+  <div class="side-h">Your folders</div>
+  <div class="fl" id="flist"></div>
+  <button class="connect" id="connectBtn"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Connect a folder</button>
+  <div class="side-foot">
+    <button class="navb" data-view="dupes"><span>Duplicates</span><span class="n" id="dupN" hidden></span></button>
+    <button class="navb" data-view="activity"><span>Activity</span></button>
+    <button class="navb" data-view="settings"><span>Settings</span></button>
+    <button class="navb" data-view="about"><span>About</span><span class="n" id="updN" hidden style="background:var(--go-soft);color:var(--go)">Update</span></button>
+    <div class="scanline" id="scanline"></div><div class="scanline" id="ver" style="padding-top:0"></div>
+  </div>
+</aside>
+
+<main id="main">
+  <!-- folder view -->
+  <section class="view" id="v-folder">
+    <div class="top">
+      <label class="search"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input type="search" id="q" placeholder="Search names, folders and text inside files" autocomplete="off"></label>
+      <label class="scope"><span class="switch"><input type="checkbox" id="allScope"><i></i></span>All folders</label>
+    </div>
+    <div id="folderBody"></div>
+  </section>
+
+  <section class="view" id="v-home"><div id="homeBody"></div></section>
+
+  <section class="view" id="v-search"><div id="searchBody"></div></section>
+
+  <section class="view" id="v-welcome">
+    <div class="welcome">
+      <h1>Messy folders, meet SortWise.</h1>
+      <p>Desktop buried in screenshots? Downloads full of Document3.docx and Book1.xlsx? SortWise reads what each file is about and puts it where it belongs, in the folders you already have or new ones it makes. Then it keeps every new file in its place, on its own.</p>
+      <button class="btn go big" onclick="openConnect()">Choose a folder</button>
+      <div class="sec-h"><h2>Suggestions on this PC</h2></div>
+      <div class="chips" id="welcomeChips"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-dupes">
+    <div class="head" style="margin-bottom:6px"><div><h1>Duplicates</h1><div class="where" id="dupSummary">Checking…</div></div></div>
+    <div class="dupbar" id="dupBar"><div class="chips" id="dupTabs"></div><button class="btn bad" id="dupBulk">Delete everything marked here</button></div>
+    <div id="dupBody"></div>
+  </section>
+
+  <section class="view" id="v-activity">
+    <div class="head"><div><h1>Activity</h1><div class="where">What SortWise has moved, renamed and deleted. Undo puts things back where they were.</div></div></div>
+    <div id="actBody"></div>
+  </section>
+
+  <section class="view" id="v-about">
+    <div class="about">
+      <div class="mark"><svg width="74" height="64" viewBox="0 0 30 26" aria-hidden="true"><rect x="4" y="1" width="18" height="13" rx="2" fill="#B57BE0" transform="rotate(-8 13 7)"/><rect x="8" y="3" width="18" height="13" rx="2" fill="#6C8EF5" transform="rotate(6 17 9)"/><path d="M1 10h9l2 2h17v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" fill="#1E5B4F"/></svg>
+        <div><h1>SortWise</h1><span class="ver" id="aboutVer">Version</span> <span class="hint" id="aboutBuild"></span></div></div>
+      <p class="hint" style="font-size:15px;max-width:54ch">SortWise reads what your files are about and puts each one where it belongs, then keeps new files in their place. It finds duplicates and searches the text inside your documents. Everything runs on your own computer.</p>
+      <div class="upd" id="updCard"><div><b id="updTitle">Updates</b></div><button class="btn" id="updBtn">Check for updates</button><div class="hint" id="updText">SortWise checks GitHub for new builds. Your folders and settings stay exactly as they are when it updates.</div><div class="progress" id="updProg" hidden><i id="updBar"></i></div></div>
+      <div class="sec-h"><h2>Made by Claude and Ganesh Acharya</h2></div>
+      <div class="links">
+        <button class="lnk" data-url="https://gacharya.com/"><span class="ico" style="background:#1E5B4F">GA</span><span><b>Ganesh Acharya</b><small>gacharya.com</small></span><span class="go">↗</span></button>
+        <button class="lnk" data-url="https://github.com/theganeshlife"><span class="ico" style="background:#24292F"><svg width="20" height="20" viewBox="0 0 16 16" fill="#fff"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span><span><b>GitHub</b><small>github.com/theganeshlife</small></span><span class="go">↗</span></button>
+        <button class="lnk" data-url="https://buymemomo.com/gacharya"><span class="ico" style="background:#E8822E">🥟</span><span><b>Buy Me a Momo</b><small>buymemomo.com/gacharya</small></span><span class="go">↗</span></button>
+      </div>
+      <p class="hint" style="margin-top:26px" id="aboutData"></p>
+    </div>
+  </section>
+
+  <section class="view" id="v-settings">
+    <div class="head"><div><h1>Settings</h1></div></div>
+    <div class="settings-card"><h3>Start SortWise when I sign in</h3><p class="hint">SortWise keeps sorting from the tray (Windows) or menu bar (Mac) after you close this window. This makes it start again after a restart too.</p>
+      <label class="switch"><input type="checkbox" id="sStart"><i></i><span>Start automatically when I sign in</span></label></div>
+    <div class="settings-card"><h3>When to make a new topic folder</h3><p class="hint">SortWise makes a topic folder when at least this many files share a subject, in their names or in the text inside them.</p>
+      <input type="number" id="sMin" min="2" max="20" style="width:90px"> <span class="hint">files</span></div>
+    <div class="settings-card"><h3>Connected folders</h3><div id="sFolders"></div></div>
+    <div class="settings-card"><h3>Stop SortWise</h3><p class="hint">Closes SortWise completely, including the tray or menu-bar icon. Folders stop being sorted until you open SortWise again.</p><button class="btn" id="quitBtn">Quit SortWise</button></div>
+  </section>
+</main>
+
+<div class="drawer" id="drawer"><button class="x" onclick="closeDrawer()" aria-label="Close">✕</button><div class="pv" id="dpv"></div><div class="info" id="dinfo"></div></div>
+
+<dialog id="connectDlg">
+  <h2>Connect a folder</h2>
+  <p>SortWise will show what's scattered in it. Nothing moves until you choose Sort this folder.</p>
+  <button class="btn go" id="pickBtn">Browse for a folder…</button>
+  <div class="sec-h" style="margin-top:22px"><h2 style="font-size:14px">Or pick one of these</h2></div>
+  <div class="chips" id="sugChips"></div>
+  <div class="sec-h" style="margin-top:22px"><h2 style="font-size:14px">Or paste a path</h2></div>
+  <div class="row"><input id="pathIn" placeholder="C:\Users\you\Downloads  or  /Users/you/Downloads" style="flex:1"><button class="btn" id="pathGo">Connect</button></div>
+  <p class="hint" id="connectErr" style="color:var(--bad);margin-top:10px"></p>
+  <div style="text-align:right;margin-top:6px"><button class="btn ghost" onclick="connectDlg.close()">Cancel</button></div>
+</dialog>
+
+<dialog id="confirmDlg"><h2 id="cTitle"></h2><p id="cText"></p><div class="row" style="justify-content:flex-end"><button class="btn ghost" id="cNo">Cancel</button><button class="btn bad" id="cYes"></button></div></dialog>
+<div class="toasts" id="toasts"></div>
+
+<script>
+const TOKEN="__TOKEN__";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const api=async(p,b)=>{const r=await fetch(p,{method:b?"POST":"GET",headers:{"X-Token":TOKEN,"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined});const j=await r.json();if(j&&j.error)throw new Error(j.error);return j};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fsz=b=>{if(!b)return"0 B";const u=["B","KB","MB","GB","TB"];let i=0;while(b>=1024&&i<4){b/=1024;i++}return(b<10&&i?b.toFixed(1):Math.round(b))+" "+u[i]};
+const fdate=t=>t?new Date(t*1000).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"";
+const ago=t=>{const s=(Date.now()/1000-t);if(s<60)return"just now";if(s<3600)return Math.floor(s/60)+" min ago";if(s<86400)return Math.floor(s/3600)+" h ago";return fdate(t)};
+const SEP=navigator.platform.startsWith("Win")?"\\":"/";
+const sepOf=p=>p.includes("\\")?"\\":"/";
+const COL={Documents:"#5B7FE8",PDFs:"#E0574F",Spreadsheets:"#2E9E62",Presentations:"#E8822E",Photos:"#A66BD6",Images:"#D0659F",Videos:"#D94862",Audio:"#1FA3B0",Design:"#D9A520",eBooks:"#9A6F48",Code:"#56647E",Archives:"#7F8A9C",Installers:"#6F7B90",Fonts:"#8A6FD0",Email:"#3D8BD9",Screenshots:"#8F7CEB","Invoices & Receipts":"#2F9580","CVs & Job Applications":"#4472DB","Tickets & Bookings":"#D97A48",Folder:"#C09A5B",Other:"#8D97A8"};
+const IMG=new Set(["jpg","jpeg","png","gif","webp","bmp","svg","avif"]);
+const VID=new Set(["mp4","webm","mov","m4v"]);
+const fileURL=id=>`/file/${id}?t=${TOKEN}`;
+const hash=s=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return(h>>>0)/4294967295};
+const IS_MAC=/Mac/.test(navigator.platform);const BIN=IS_MAC?"Bin":"Recycle Bin";
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function toast(msg,actions=[]){const t=document.createElement("div");t.className="toast";t.innerHTML=`<span>${esc(msg)}</span>`;
+  actions.forEach(([label,fn])=>{const b=document.createElement("button");b.textContent=label;b.onclick=()=>{fn();t.remove()};t.appendChild(b)});
+  $("#toasts").appendChild(t);while($("#toasts").children.length>3)$("#toasts").firstElementChild.remove();setTimeout(()=>t.remove(),actions.length?10000:4500)}
+function confirmBox(title,text,yes){return new Promise(res=>{$("#cTitle").textContent=title;$("#cText").textContent=text;$("#cYes").textContent=yes;
+  confirmDlg.showModal();$("#cYes").onclick=()=>{confirmDlg.close();res(true)};$("#cNo").onclick=()=>{confirmDlg.close();res(false)}})}
+
+/* ---------------- state & routing ---------------- */
+let FOLDERS=[], CUR={base:null,rel:""}, VIEW="folder", BUSY=false;
+function show(v){VIEW=v;const pane=(v==="home"&&!FOLDERS.length)?"welcome":v;
+  $$(".view").forEach(x=>x.classList.toggle("on",x.id==="v-"+pane));$$(".navb").forEach(b=>b.classList.toggle("on",b.dataset.view===v||(v==="welcome"&&b.dataset.view==="home")));
+  if(v!=="folder"&&v!=="search")$$(".fitem").forEach(b=>b.classList.remove("on"));
+  ({home:loadHome,dupes:loadDupes,activity:loadActivity,settings:loadSettings,about:loadAbout})[v]?.();$("#main").scrollTop=0}
+$$(".navb").forEach(b=>b.onclick=()=>show(b.dataset.view));
+$(".brand").onclick=()=>show("home");
+
+async function loadFolders(){
+  const r=await api("/api/folders");FOLDERS=r.folders;
+  $("#flist").innerHTML=FOLDERS.map(f=>{const st=!f.exists?`<small class="messy">Can't find this folder</small>`:
+     f.managed&&f.watch?`<small><span class="pulse"></span>${f.loose?f.loose+" waiting":"Sorted, watching"}</small>`:
+     f.loose?`<small class="messy">${f.loose} loose file${f.loose>1?"s":""}</small>`:`<small>${f.total.toLocaleString()} files</small>`;
+    return `<div class="fwrap"><button class="fitem ${CUR.base===f.path&&VIEW==="folder"?"on":""}" data-base="${esc(f.path)}" title="${esc(f.path)}">${folderIcon(f.managed?"#1E5B4F":"#C09A5B")}<b>${esc(f.name)}</b>${st}</button><button class="dc" data-dc="${esc(f.path)}" title="Disconnect ${esc(f.name)}" aria-label="Disconnect ${esc(f.name)}"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></div>`}).join("");
+  $$(".fitem").forEach(b=>b.onclick=()=>openFolder(b.dataset.base,""));
+  $$("#flist .dc").forEach(b=>b.onclick=e=>{e.stopPropagation();disconnectFolder(b.dataset.dc)});
+  const chips=r.suggest.map(s=>`<button class="chip" data-path="${esc(s.path)}">${folderIcon("#C09A5B",16)}${esc(s.name)}</button>`).join("")||`<span class="hint">No common folders found. Use Browse or paste a path.</span>`;
+  $("#sugChips").innerHTML=chips;$("#welcomeChips").innerHTML=chips;
+  $$("[data-path]").forEach(b=>b.onclick=()=>doConnect(b.dataset.path));
+  const s=r.state;$("#scanline").textContent=s.scanning?(s.progress||"Indexing…"):"";
+  return r}
+function folderIcon(c,s=28){return `<svg class="ic" width="${s}" height="${s*.8}" viewBox="0 0 28 22"><path d="M1 3a2 2 0 0 1 2-2h7l3 3h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" fill="${c}"/><path d="M1 8h26v11a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" fill="${c}" style="filter:brightness(1.15)"/></svg>`}
+
+/* ---------------- disconnect ---------------- */
+async function disconnectFolder(path){
+  const f=FOLDERS.find(x=>x.path===path);
+  if(!await confirmBox(`Disconnect ${f?f.name:"this folder"}?`,"SortWise stops showing and sorting it. Your files stay exactly where they are.","Disconnect"))return;
+  try{await api("/api/disconnect",{path})}catch(e){toast(e.message);return}
+  const wasOpen=CUR.base===path;
+  await loadFolders();
+  if(VIEW==="settings")loadSettings();
+  if(wasOpen||!FOLDERS.length){CUR={base:null,rel:""};show("home")}else if(VIEW==="home")loadHome();
+  toast(`Disconnected ${f?f.name:"folder"}.`)}
+
+/* ---------------- connect ---------------- */
+function openConnect(){$("#connectErr").textContent="";$("#pathIn").value="";connectDlg.showModal()}
+$("#connectBtn").onclick=openConnect;
+$("#pickBtn").onclick=async()=>{$("#pickBtn").disabled=true;$("#pickBtn").textContent="Choose the folder in the window that opened…";
+  try{const r=await api("/api/pick",{});if(r.path)await doConnect(r.path)}catch(e){$("#connectErr").textContent=e.message+" You can paste the path below instead."}
+  finally{$("#pickBtn").disabled=false;$("#pickBtn").textContent="Browse for a folder…"}};
+$("#pathGo").onclick=()=>doConnect($("#pathIn").value);
+$("#pathIn").onkeydown=e=>{if(e.key==="Enter")doConnect($("#pathIn").value)};
+async function doConnect(p){try{const r=await api("/api/connect",{path:p});connectDlg.close();await loadFolders();openFolder(r.path,"")}catch(e){$("#connectErr").textContent=e.message}}
+
+/* ---------------- home ---------------- */
+async function loadHome(){
+  if(!FOLDERS.length)return;
+  const h=await api("/api/home");
+  const hr=new Date().getHours(), greet=hr<5?"Good evening":hr<12?"Good morning":hr<18?"Good afternoon":"Good evening";
+  const n=h.folders.length;
+  const line=h.waiting?`${h.waiting} file${h.waiting>1?"s are":" is"} waiting to be sorted.`:"Everything is sorted.";
+  const firstMessy=h.folders.find(f=>f.loose>0);
+  const tiles=`<div class="tiles">
+    <button class="tile go" data-go="activity"><span class="lbl">Files sorted</span><b>${h.sorted.toLocaleString()}</b><small>${h.sorted_week?h.sorted_week.toLocaleString()+" in the last 7 days":"Nothing sorted this week yet"}</small></button>
+    <button class="tile ${h.waiting?"warn":""}" data-go="${firstMessy?"messy":""}"><span class="lbl">Waiting to be sorted</span><b>${h.waiting.toLocaleString()}</b><small>${h.waiting?`In ${h.folders.filter(f=>f.loose).length} folder${h.folders.filter(f=>f.loose).length>1?"s":""}`:"All folders are sorted"}</small></button>
+    <button class="tile" data-go="settings"><span class="lbl">Sorting automatically</span><b>${h.watching} <span style="font-size:18px;color:var(--faint)">of ${n}</span></b><small>${h.watching?"New files are put away as they arrive":"Sort a folder to switch this on"}</small></button>
+    <button class="tile ${h.duplicates.sets?"warn":""}" data-go="dupes"><span class="lbl">Duplicates</span><b>${h.duplicates.sets.toLocaleString()}</b><small>${h.duplicates.sets?"About "+fsz(h.duplicates.bytes)+" could be freed":"No duplicates found"}</small></button></div>`;
+  const cards=h.folders.map(f=>{const st=!f.exists?`<span class="st messy">Can't find this folder</span>`:
+      f.managed&&f.watch?`<span class="st"><span class="pulse"></span>Sorted, watching for new files</span>`:f.loose?`<span class="st messy">${f.loose} loose file${f.loose>1?"s":""}</span>`:`<span class="st">Connected</span>`;
+    return `<div class="fcard">${folderIcon(f.managed?"#1E5B4F":"#C09A5B",44)}<h3>${esc(f.name)}</h3><span class="where">${esc(f.path)}</span>${st}
+      <div class="row"><span class="hint">${f.total.toLocaleString()} file${f.total===1?"":"s"}${f.bytes?", "+fsz(f.bytes):""}</span><span style="flex:1"></span>
+      <button class="btn sm" data-open="${esc(f.path)}">Open</button>${f.loose&&f.exists?`<button class="btn go sm" data-sort="${esc(f.path)}">Sort this folder</button>`:""}</div></div>`}).join("");
+  const recent=h.recent.length?`<div class="recent">${h.recent.map(r=>`<div class="r"><div><b>${esc(r.label)}</b>: ${r.n} item${r.n>1?"s":""}${r.undone?" (undone)":""}<br><small>${esc(r.names.join(", "))}${r.n>r.names.length?"…":""}</small></div><small>${ago(r.ts)}</small></div>`).join("")}</div>`
+      :`<div class="empty-desk">Nothing has been sorted yet. Open a folder and choose Sort this folder.</div>`;
+  $("#homeBody").innerHTML=`<div class="hello"><div><h1>${greet}.</h1><p>${n} folder${n>1?"s":""} connected. ${line}</p></div>
+    <label class="search"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="homeQ" placeholder="Search all your folders" autocomplete="off"></label></div>
+    ${tiles}
+    <div class="sec-h"><h2>Your folders</h2><span>${n}</span><span style="flex:1"></span><button class="btn sm" onclick="openConnect()">Connect a folder</button></div>
+    <div class="fcards">${cards}</div>
+    <div class="sec-h"><h2>Recently</h2><span style="flex:1"></span><button class="btn ghost sm" onclick="show('activity')">See all activity</button></div>${recent}`;
+  $$("#homeBody [data-open]").forEach(b=>b.onclick=()=>openFolder(b.dataset.open,""));
+  $$("#homeBody [data-sort]").forEach(b=>b.onclick=async()=>{await openFolder(b.dataset.sort,"");$("#manageBtn")?.click()});
+  $$("#homeBody .tile").forEach(t=>t.onclick=()=>{const g=t.dataset.go;if(g==="messy"&&firstMessy)openFolder(firstMessy.path,"");else if(g&&g!=="messy")show(g)});
+  $("#homeQ").onkeydown=e=>{if(e.key==="Enter"&&e.target.value.trim()){const q=e.target.value.trim();CUR={base:FOLDERS[0].path,rel:""};show("folder");$$(".fitem").forEach(b=>b.classList.remove("on"));$("#allScope").checked=true;$("#q").value=q;runSearch()}};
+}
+
+/* ---------------- folder view ---------------- */
+let DATA=null;
+async function openFolder(base,rel){
+  CUR={base,rel};show("folder");$("#q").value="";
+  $$(".fitem").forEach(b=>b.classList.toggle("on",b.dataset.base===base));
+  try{DATA=await api(`/api/browse?base=${encodeURIComponent(base)}&rel=${encodeURIComponent(rel)}`)}catch(e){
+    const gone=/isn't connected|no longer exists/.test(e.message);
+    $("#folderBody").innerHTML=gone?`<div class="banner warn"><div class="grow"><b>${esc(e.message)}</b><p>If you moved or renamed it, disconnect it in Settings and connect it again.</p></div></div>`
+      :`<div class="banner warn"><div class="grow"><b>SortWise is busy reading your files.</b><p>This folder will open in a moment.</p></div><button class="btn" id="retryOpen">Try again</button></div>`;
+    if(!gone){$("#retryOpen").onclick=()=>openFolder(base,rel);setTimeout(()=>{if(CUR.base===base&&CUR.rel===rel&&$("#retryOpen"))openFolder(base,rel)},3000)}
+    return}
+  renderFolder()}
+function crumbs(){const f=FOLDERS.find(x=>x.path===CUR.base);const parts=CUR.rel?CUR.rel.split(/[\\/]/):[];
+  let html=`<a data-home="1">Home</a> <span>›</span> <a data-rel="">${esc(f?f.name:CUR.base)}</a>`,acc=[];
+  parts.forEach(p=>{acc.push(p);html+=` <span>›</span> <a data-rel="${esc(acc.join(sepOf(CUR.base)))}">${esc(p)}</a>`});return html}
+function renderFolder(){
+  const d=DATA, atRoot=!CUR.rel, loose=d.files.length;
+  const canManage=atRoot?loose>0:loose>=6;
+  let acts=`<label class="switch" title="Sort new arrivals automatically"><input type="checkbox" id="watchT" ${d.watch?"checked":""} ${d.managed?"":"disabled"}><i></i><span>Sort new files automatically</span></label>
+    <button class="btn" id="openEx">${IS_MAC?"Show in Finder":"Open in File Explorer"}</button>`;
+  if(canManage)acts+=`<button class="btn go big" id="manageBtn">${atRoot?"Sort this folder":"Sort this folder"}</button>`;
+  let banner="";
+  if(atRoot&&d.managed&&!loose)banner=`<div class="banner"><div class="grow"><b>This folder is sorted.</b><p>${d.watch?"Anything new that lands here is sorted into the folders below within a few seconds.":"Turn on “Sort new files automatically” to keep it this way."}</p></div></div>`;
+  else if(atRoot&&!d.managed&&loose)banner=`<div class="banner warn"><div class="grow"><b>${loose} loose file${loose>1?"s":""} scattered here.</b><p>Sort this folder reads what each file is about, puts it in the folder where it belongs (or makes one), and moves everything in. You can undo it in one click.</p></div></div>`;
+  const folders=d.folders.map(f=>folderHTML(f)).join("");
+  $("#folderBody").innerHTML=`
+   <div class="crumbs">${crumbs()}</div>
+   <div class="head"><div><h1>${esc(d.name)}</h1><div class="where">${esc(atRoot?d.base:d.base+sepOf(d.base)+d.rel)}</div></div><div class="acts">${acts}</div></div>
+   <div id="bannerSlot">${banner}</div>
+   <div class="sec-h"><h2>Folders</h2><span id="fcount">${d.folders.length||""}</span></div>
+   <div class="shelf" id="shelf">${folders||`<div class="hint" id="noFolders">No folders yet.</div>`}</div>
+   <div class="sec-h"><h2>${atRoot?"Loose files":"Files"}</h2><span>${loose||""}</span></div>
+   <div class="desk ${atRoot&&!d.managed?"messy":""}" id="desk">${loose?d.files.map(slipHTML).join(""):`<div class="empty-desk">${atRoot?"Nothing loose here.":"No files directly in this folder."}</div>`}</div>`;
+  $$("#folderBody .crumbs a").forEach(a=>a.onclick=()=>a.dataset.home?show("home"):openFolder(CUR.base,a.dataset.rel));
+  bindFolderTiles();
+  $$("#desk .slip").forEach(s=>s.onclick=()=>openDrawer(+s.dataset.id));
+  $("#openEx").onclick=()=>api("/api/open",{path:CUR.rel?CUR.base+sepOf(CUR.base)+CUR.rel:CUR.base});
+  const w=$("#watchT");if(w)w.onchange=async()=>{await api("/api/watch",{base:CUR.base,on:w.checked});toast(w.checked?"New files here will be sorted automatically.":"Automatic sorting is off for this folder.");loadFolders();renderBannerOnly()};
+  if($("#manageBtn"))$("#manageBtn").onclick=manage;
+}
+function renderBannerOnly(){openFolder(CUR.base,CUR.rel)}
+function bindFolderTiles(){$$("#shelf .folder").forEach(f=>f.onclick=()=>{if(!BUSY)openFolder(CUR.base,f.dataset.rel)})}
+const TOPIC_COL=["#B8894A","#3F8E7E","#7A6BC4","#B75D6E","#4A7DB3","#8E7A3A","#5E8C4A","#A0607F"];
+function folderHTML(f,fresh){
+  const c=f.kind==="Folder"?TOPIC_COL[Math.floor(hash(f.name)*TOPIC_COL.length)]:(COL[f.kind]||COL.Folder);
+  const peek=(f.thumbs||[]).slice(0,3).map(id=>`<span class="p" style="background-image:url('${fileURL(id)}')"></span>`).join("")||(f.count?`<span class="p"></span><span class="p"></span>`:"");
+  const subs=(f.subs||[]).slice(0,4).map(s=>`<span>${esc(s)}</span>`).join("");
+  return `<button class="folder ${f.generic?"generic":""} ${fresh?"fresh":""}" style="--c:${c}" data-rel="${esc(f.rel)}" data-key="${esc(f.name)}" title="${esc(f.name)}">
+    <span class="tab"></span><span class="peek">${peek}</span>${fresh?`<span class="newtag">New</span>`:""}
+    <span class="body">${subs?`<span class="subs">${subs}</span>`:""}<span class="name">${esc(f.name)}</span><span class="meta"><span class="count" data-count="${f.count||0}">${(f.count||0).toLocaleString()} file${f.count===1?"":"s"}</span><span>${f.size?fsz(f.size):""}</span></span></span></button>`}
+function thumbInner(f){const c=COL[f.kind]||COL.Other;
+  if(IMG.has(f.ext)&&!f.cloud)return `<img loading="lazy" src="${fileURL(f.id)}" alt="">`;
+  const lines=["Documents","PDFs","Presentations","Spreadsheets","Code","eBooks"].includes(f.kind)?`<span class="lines"><i></i><i></i><i></i><i></i></span>`:"";
+  const icon=f.kind==="Videos"?`<svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="${c}"/><path d="M14 11l9 6-9 6z" fill="#fff"/></svg>`:
+             f.kind==="Audio"?`<svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="${c}"/><path d="M11 20v-6M15 23V11M19 21v-8M23 18v-2" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>`:"";
+  return lines+(icon||`<span class="ext">${esc((f.ext||"file").toUpperCase().slice(0,5))}</span>`)}
+function slipHTML(f){const h=hash(f.name),r=(h*7-3.5).toFixed(2),dx=((hash(f.name+"x")-.5)*10).toFixed(1),dy=((hash(f.name+"y")-.5)*12).toFixed(1);
+  return `<button class="slip" style="--c:${COL[f.kind]||COL.Other};--r:${r}deg;--dx:${dx}px;--dy:${dy}px" data-id="${f.id}" data-src="${esc(f.rel)}" title="${esc(f.name)}">
+    <span class="th">${thumbInner(f)}</span>${f.cloud?`<span class="cl">online</span>`:""}<span class="nm">${esc(f.name)}</span></button>`}
+
+/* ---------------- the live manage moment ---------------- */
+async function manage(){
+  if(BUSY)return;BUSY=true;
+  const btn=$("#manageBtn");btn.disabled=true;btn.textContent="Reading your files…";
+  let plan;
+  try{plan=await planFor()}catch(e){toast(e.message);BUSY=false;btn.disabled=false;btn.textContent="Sort this folder";return}
+  if(!plan.moves.length){toast("Nothing here needs moving.");BUSY=false;return}
+  const desk=$("#desk");desk.classList.remove("messy");
+  // 1. build the folders
+  const shelf=$("#shelf");$("#noFolders")?.remove();
+  const tops={};plan.folders.forEach(f=>{const t=tops[f.top]||(tops[f.top]={name:f.top,rel:f.top,kind:f.kind,count:0,new:true,subs:new Set()});
+    if(!f.new)t.new=false;if(f.rel!==f.top)t.subs.add(f.rel.split(/[\\/]/)[1])});
+  const relPrefix=CUR.rel?CUR.rel+sepOf(CUR.base):"";
+  const tiles={};
+  $$("#shelf .folder").forEach(el=>tiles[el.dataset.key.toLowerCase()]=el);
+  const order=Object.values(tops).sort((a,b)=>a.name.localeCompare(b.name));
+  btn.textContent="Making folders…";
+  for(const t of order){
+    let el=tiles[t.name.toLowerCase()];
+    if(!el){shelf.insertAdjacentHTML("beforeend",folderHTML({name:t.name,rel:relPrefix+t.rel,kind:t.kind,count:0,subs:[...t.subs]},true));el=shelf.lastElementChild;tiles[t.name.toLowerCase()]=el;await sleep(reduced?0:70)}
+    else if(t.subs.size){const b=el.querySelector(".body");if(!b.querySelector(".subs"))b.insertAdjacentHTML("afterbegin",`<span class="subs">${[...t.subs].slice(0,4).map(s=>`<span>${esc(s)}</span>`).join("")}</span>`)}
+  }
+  $("#fcount").textContent=$$("#shelf .folder").length;
+  // 2. move the files, flying each slip into its folder
+  btn.textContent="Sorting…";
+  $("#bannerSlot").innerHTML=`<div class="banner"><div class="grow"><b id="mvTitle">Sorting ${plan.moves.length} files into ${Object.keys(tops).length} folders</b><p id="mvNow">&nbsp;</p><div class="progress"><i id="mvBar"></i></div></div></div>`;
+  const slips={};$$("#desk .slip").forEach(s=>slips[s.dataset.src]=s);
+  const batch=Date.now().toString(36);let batchId=null,done=0,errors=0;
+  const moves=plan.moves.map(m=>({...m,src:relPrefix+m.src,dest:relPrefix+m.dest}));
+  const gap=reduced?0:Math.max(25,Math.min(130,7000/moves.length));
+  for(let i=0;i<moves.length;i+=20){
+    const chunk=moves.slice(i,i+20);
+    const res=await api("/api/apply",{base:CUR.base,moves:chunk,batch:batchId||undefined});batchId=res.batch;
+    const okSrc=new Set(res.moved.map(m=>m.src));errors+=res.errors.length;
+    for(const m of chunk){
+      const plainSrc=m.src.slice(relPrefix.length);
+      const slip=slips[plainSrc]||slips[m.src];const top=m.dest.slice(relPrefix.length).split(/[\\/]/)[0];
+      const tile=tiles[top.toLowerCase()];
+      if(!okSrc.has(m.src)){if(slip)slip.style.outline="2px solid var(--bad)";continue}
+      done++;$("#mvNow").textContent=`${m.name} → ${m.dest.slice(relPrefix.length)}`;$("#mvBar").style.width=(done/moves.length*100)+"%";
+      if(slip&&tile)fly(slip,tile);else if(tile)bumpTile(tile);
+      await sleep(gap)}
+  }
+  await sleep(reduced?0:700);
+  await api("/api/managed",{base:CUR.base,batch:batchId,count:done,watch:true});
+  $("#bannerSlot").innerHTML=`<div class="banner"><div class="grow"><b>Sorted ${done} file${done===1?"":"s"} into ${Object.keys(tops).length} folders.</b><p>New files that land here will be sorted into these folders automatically${errors?`. ${errors} file${errors>1?"s were":" was"} open in another app and stayed put`:""}.</p></div><button class="btn" id="undoAll">Undo</button></div>`;
+  $("#undoAll").onclick=async()=>{const r=await api("/api/undo",{batch:batchId});toast(`Put ${r.reverted} files back.`);BUSY=false;await loadFolders();openFolder(CUR.base,CUR.rel)};
+  BUSY=false;await loadFolders();
+  const keep=$("#bannerSlot").innerHTML;await openFolder(CUR.base,CUR.rel);$("#bannerSlot").innerHTML=keep;
+  $("#undoAll").onclick=async()=>{const r=await api("/api/undo",{batch:batchId});toast(`Put ${r.reverted} files back.`);await loadFolders();openFolder(CUR.base,CUR.rel)};
+}
+async function planFor(){const target=CUR.rel?CUR.base+sepOf(CUR.base)+CUR.rel:CUR.base;
+  if(!CUR.rel)return api(`/api/plan?base=${encodeURIComponent(CUR.base)}`);
+  // inside a subfolder: plan as if it were its own folder
+  const p=await api(`/api/plan?base=${encodeURIComponent(target)}`);return p}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function fly(slip,tile){
+  const a=slip.getBoundingClientRect(),b=tile.getBoundingClientRect();
+  if(reduced){slip.remove();bumpTile(tile);return}
+  const c=slip.cloneNode(true);c.classList.add("flyer");c.style.left=a.left+"px";c.style.top=a.top+"px";c.style.width=a.width+"px";c.style.margin=0;c.style.transform="none";
+  document.body.appendChild(c);slip.style.visibility="hidden";
+  const dx=b.left+b.width/2-(a.left+a.width/2),dy=b.top+b.height/2-(a.top+a.height/2);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{c.style.transform=`translate(${dx}px,${dy}px) scale(.18) rotate(${(Math.random()*30-15).toFixed(0)}deg)`;c.style.opacity=".25"}));
+  setTimeout(()=>{c.remove();slip.remove();bumpTile(tile)},640)}
+function bumpTile(tile){tile.classList.remove("bump");void tile.offsetWidth;tile.classList.add("bump");
+  const cn=tile.querySelector(".count");const n=+cn.dataset.count+1;cn.dataset.count=n;cn.textContent=`${n.toLocaleString()} file${n===1?"":"s"}`}
+
+/* ---------------- drawer (file preview) ---------------- */
+async function openDrawer(id){
+  const f=await api("/api/file?id="+id);const c=COL[f.kind]||COL.Other;
+  let pv="";
+  if(f.cloud&&(IMG.has(f.ext)||VID.has(f.ext)||f.ext==="pdf"))pv=`<button class="loadpv" onclick="this.parentElement.innerHTML=pvHTML(${JSON.stringify(f).replace(/"/g,"&quot;")})">This file is online-only. Load a preview (this downloads it)</button>`;
+  else pv=pvHTML(f);
+  $("#dpv").innerHTML=pv;
+  if(!pv.includes("<img")&&!pv.includes("<video")&&!pv.includes("<iframe")&&!f.cloud){const t=await api("/api/text?id="+id);if(t.text)$("#dpv").innerHTML=`<div class="doc">${esc(t.text.slice(0,2500))}</div>`}
+  const where=(f.dir||"").split(/[\\/]/).filter(Boolean).join(" › ")||"(top level)";
+  $("#dinfo").innerHTML=`<h3>${esc(f.name)}</h3>
+   <dl class="kv"><dt>Folder</dt><dd>${esc(where)}</dd><dt>Size</dt><dd>${fsz(f.size)}</dd><dt>Changed</dt><dd>${fdate(f.mtime)}</dd><dt>Type</dt><dd><span style="color:${c};font-weight:600">${esc(f.kind)}</span> · .${esc(f.ext)}</dd></dl>
+   <div class="row"><button class="btn go" id="dOpen">Open</button><button class="btn" id="dReveal">${IS_MAC?"Show in Finder":"Show in File Explorer"}</button></div>
+   <div class="sec-h" style="margin-top:22px"><h2 style="font-size:14px">Rename</h2></div>
+   <div class="row"><input id="dName" value="${esc(f.name.replace(/\.[^.]+$/,""))}" style="flex:1"><button class="btn" id="dRen">Rename</button></div>
+   <div class="sec-h" style="margin-top:22px"><h2 style="font-size:14px">Tags and note</h2><span>searchable</span></div>
+   <input id="dTags" placeholder="e.g. important, to read" value="${esc((f.tags||[]).join(", "))}" style="width:100%;margin-bottom:8px">
+   <textarea id="dNote" rows="3" style="width:100%" placeholder="A note to your future self">${esc(f.note||"")}</textarea>
+   <div style="margin-top:8px"><button class="btn" id="dSave">Save tags and note</button></div>`;
+  $("#dOpen").onclick=()=>api("/api/open",{id});$("#dReveal").onclick=()=>api("/api/open",{id,reveal:true});
+  $("#dRen").onclick=async()=>{try{const r=await api("/api/rename",{id,name:$("#dName").value});toast("Renamed to "+r.name);openDrawer(id);refreshView()}catch(e){toast(e.message)}};
+  $("#dSave").onclick=async()=>{await api("/api/meta",{id,tags:$("#dTags").value.split(","),note:$("#dNote").value});toast("Saved")};
+  $("#drawer").classList.add("on")}
+function pvHTML(f){if(IMG.has(f.ext))return `<img src="${fileURL(f.id)}" alt="">`;if(VID.has(f.ext))return `<video src="${fileURL(f.id)}" controls preload="metadata"></video>`;
+  if(f.ext==="pdf")return `<iframe src="${fileURL(f.id)}#toolbar=0&view=FitH"></iframe>`;
+  return `<div style="text-align:center;color:${COL[f.kind]||COL.Other};font:600 40px var(--display)">.${esc(f.ext||"?")}</div>`}
+function closeDrawer(){$("#drawer").classList.remove("on");$("#dpv").innerHTML=""}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();if(e.key==="/"&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();if(VIEW!=="folder"&&VIEW!=="search"&&FOLDERS[0])openFolder(CUR.base||FOLDERS[0].path,"");$("#q").focus()}});
+function refreshView(){if(VIEW==="home")loadHome();if(VIEW==="folder"&&CUR.base)openFolder(CUR.base,CUR.rel);if(VIEW==="search")runSearch()}
+
+/* ---------------- search ---------------- */
+let st;$("#q").addEventListener("input",()=>{clearTimeout(st);st=setTimeout(runSearch,170)});
+$("#allScope").onchange=()=>{if($("#q").value)runSearch()};
+async function runSearch(){
+  const q=$("#q").value.trim();
+  if(!q){$("#v-search").classList.remove("on");$("#v-folder").classList.add("on");VIEW="folder";$("#folderBody").style.display="";return}
+  VIEW="search";$("#folderBody").style.display="none";
+  const base=$("#allScope").checked?"":CUR.base||"";
+  const r=await api(`/api/search?q=${encodeURIComponent(q)}&base=${encodeURIComponent(base)}`);
+  let html=`<div class="head" style="margin-top:0"><div><h1 style="font-size:28px">${r.total.toLocaleString()} file${r.total===1?"":"s"}${r.folders.length?` and ${r.folders.length} folder${r.folders.length>1?"s":""}`:""}</h1><div class="where">${base?"in "+esc(FOLDERS.find(f=>f.path===base)?.name||base):"in all connected folders"}</div></div></div>`;
+  if(r.folders.length)html+=`<div class="chips" style="margin-bottom:18px">${r.folders.map(f=>`<button class="chip" data-fb="${esc(f.base)}" data-fr="${esc(f.rel)}">${folderIcon("#C09A5B",16)}${esc(f.rel.split(/[\\/]/).join(" › "))}</button>`).join("")}</div>`;
+  html+=r.results.map(f=>{const c=COL[f.kind]||COL.Other;const fold=FOLDERS.find(x=>x.path===f.base);
+    const thumb=IMG.has(f.ext)&&!f.cloud?`<img loading="lazy" src="${fileURL(f.id)}" alt="">`:esc((f.ext||"").toUpperCase().slice(0,4));
+    const sn=f.snippet&&f.snippet.trim()?`<div class="sn">${esc(f.snippet).replace(/\[\[/g,"<mark>").replace(/\]\]/g,"</mark>")}</div>`:"";
+    const tags=(f.tags||[]).length?` · ${esc(f.tags.join(", "))}`:"";
+    return `<div class="res" style="--c:${c}" data-id="${f.id}"><span class="mini">${thumb}</span><div><b>${esc(f.name)}</b><div class="pth">${esc(fold?fold.name:"")}${f.dir?" › "+esc(f.dir.split(/[\\/]/).join(" › ")):""}${tags}</div>${sn}</div><span class="hint">${fdate(f.mtime)}</span></div>`}).join("")
+    ||`<div class="empty-desk">No files match “${esc(q)}”. Try a shorter word, or switch on All folders.</div>`;
+  $("#folderBody").insertAdjacentHTML("afterend","");
+  let host=$("#searchHost");if(!host){host=document.createElement("div");host.id="searchHost";$("#v-folder").appendChild(host)}
+  host.innerHTML=html;host.style.display="";
+  $$("#searchHost .res").forEach(x=>x.onclick=()=>openDrawer(+x.dataset.id));
+  $$("#searchHost [data-fb]").forEach(x=>x.onclick=()=>{$("#q").value="";host.style.display="none";$("#folderBody").style.display="";openFolder(x.dataset.fb,x.dataset.fr)});
+}
+const _open=openFolder;openFolder=async(b,r)=>{const h=$("#searchHost");if(h)h.style.display="none";$("#folderBody").style.display="";return _open(b,r)};
+
+/* ---------------- duplicates ---------------- */
+let DUP=null,DTAB="photos";const DNAMES={photos:"Photos",videos:"Videos",documents:"Documents",folders:"Folders",other:"Other files"};
+async function loadDupes(){$("#dupBody").innerHTML=`<div class="hint">Comparing files…</div>`;DUP=await api("/api/duplicates");
+  DUP.byTab={photos:[],videos:[],documents:[],other:[],folders:DUP.folders};DUP.files.forEach(g=>DUP.byTab[g.type].push(g));
+  for(const g of [...DUP.files,...DUP.folders]){g.mark={};g.items.forEach(it=>{const key=g.type==="folders"?it.path:it.id;g.mark[key]=(key===g.keep)?"keep":"del"})}
+  if(!DUP.byTab[DTAB].length)DTAB=Object.keys(DNAMES).find(k=>DUP.byTab[k].length)||"photos";
+  const waste=[...DUP.files,...DUP.folders].reduce((a,g)=>a+g.size*(g.items.length-1),0);
+  const n=DUP.files.length+DUP.folders.length;
+  $("#dupSummary").textContent=n?`${n} sets of duplicates. Removing the extra copies would free about ${fsz(waste)}.`:"No duplicates in your connected folders.";
+  $("#dupN").hidden=!n;$("#dupN").textContent=n;renderDupes()}
+function renderDupes(){
+  $("#dupTabs").innerHTML=Object.entries(DNAMES).map(([k,v])=>`<button class="chip ${k===DTAB?"on":""}" data-t="${k}">${v} <b>${DUP.byTab[k].length}</b></button>`).join("");
+  $$("#dupTabs .chip").forEach(c=>c.onclick=()=>{DTAB=c.dataset.t;renderDupes()});
+  const gs=DUP.byTab[DTAB];
+  const nMarked=gs.filter(g=>Object.values(g.mark).includes("keep")).reduce((a,g)=>a+Object.values(g.mark).filter(x=>x==="del").length,0);
+  $("#dupBulk").disabled=!nMarked;$("#dupBulk").textContent=nMarked?`Delete ${nMarked} marked here`:"Nothing marked";
+  $("#dupBody").innerHTML=gs.length?gs.slice(0,60).map((g,i)=>groupHTML(g,i)).join("")+(gs.length>60?`<p class="hint">Showing the 60 biggest. Clear these to see more.</p>`:""):`<div class="empty-desk">No duplicate ${DNAMES[DTAB].toLowerCase()} found.</div>`;
+  $$(".twin [data-m]").forEach(b=>b.onclick=()=>{const g=gs[+b.dataset.g];g.mark[b.dataset.k]=b.dataset.m;renderGroup(g,+b.dataset.g)});
+  $$(".dgroup [data-apply]").forEach(b=>b.onclick=()=>applyGroup(gs[+b.dataset.apply]));
+  $$(".dgroup [data-skip]").forEach(b=>b.onclick=()=>{gs.splice(+b.dataset.skip,1);renderDupes()});
+  $$(".loadpv").forEach(b=>b.onclick=()=>{b.parentElement.innerHTML=b.dataset.html})}
+function renderGroup(g,i){const el=$(`#dg${i}`);el.outerHTML=groupHTML(g,i);renderDupes()}
+function groupHTML(g,i){
+  const isF=g.type==="folders";const nDel=Object.values(g.mark).filter(x=>x==="del").length;const nKeep=g.items.length-nDel;
+  const title=isF?`${g.count} file${g.count>1?"s":""} in each folder`:esc(g.items[0].name);
+  const sub=isF?fsz(g.size)+" each":`${fsz(g.size)} each · ${esc(g.how)}`;
+  return `<div class="dgroup" id="dg${i}"><div class="gh"><b>${title}</b><span>${g.items.length} copies · ${sub}</span><span style="flex:1"></span>
+    <button class="btn ghost sm" data-skip="${i}">Not duplicates</button>
+    <button class="btn ${nDel&&nKeep?"bad":""} sm" data-apply="${i}" ${nDel&&nKeep?"":"disabled"}>${nKeep?`Delete ${nDel} marked`:"Keep at least one"}</button></div>
+    <div class="twins">${g.items.map(it=>twinHTML(g,it,i)).join("")}</div></div>`}
+function twinHTML(g,it,i){
+  const isF=g.type==="folders";const key=isF?it.path:it.id;const m=g.mark[key];
+  let pv;
+  if(isF){pv=it.thumbs.length?`<div class="grid4">${it.thumbs.map(t=>`<div style="background-image:url('${fileURL(t)}')"></div>`).join("")}</div>`:`<div class="flist">${g.list.map(x=>esc(x)).join("<br>")}${g.count>g.list.length?"<br>…":""}</div>`}
+  else{const inner=dupPV(it);pv=it.cloud&&(IMG.has(it.ext)||VID.has(it.ext))?`<button class="loadpv" data-html="${esc(inner)}">Online-only. Load preview</button>`:inner}
+  const fold=FOLDERS.find(x=>x.path===it.base);
+  const where=isF?(fold?fold.name:"")+" › "+it.rel.split(/[\\/]/).join(" › "):(fold?fold.name:"")+(it.dir?" › "+it.dir.split(/[\\/]/).join(" › "):" (top level)");
+  return `<div class="twin ${m}"><div class="pvw">${pv}<span class="stamp">${m==="keep"?"KEEP":"DELETE"}</span></div>
+   <div class="ti"><b>${esc(isF?it.name:it.name)}</b><span class="pth">${esc(where)}</span><span class="hint">${isF?"Last changed "+fdate(it.mtime):fdate(it.mtime)+" · "+fsz(it.size)}</span>
+   <div class="row">${isF?`<button class="btn sm" onclick='api("/api/open",{path:${JSON.stringify(it.path)}})'>Open</button>`:`<button class="btn sm" onclick="openDrawer(${it.id})">Preview</button><button class="btn sm" onclick="api('/api/open',{id:${it.id},reveal:true})">Show in folder</button>`}</div>
+   <div class="choose"><button class="k" data-g="${i}" data-k="${esc(key)}" data-m="keep">Keep</button><button class="d" data-g="${i}" data-k="${esc(key)}" data-m="del">Delete</button></div></div></div>`}
+function dupPV(it){if(IMG.has(it.ext))return `<img loading="lazy" src="${fileURL(it.id)}" alt="">`;if(VID.has(it.ext))return `<video src="${fileURL(it.id)}" controls preload="metadata" muted></video>`;
+  if(it.ext==="pdf"&&!it.cloud)return `<iframe src="${fileURL(it.id)}#toolbar=0&view=FitH" style="width:100%;height:100%;border:0;background:#fff" loading="lazy"></iframe>`;
+  return `<div class="doc" data-text="${it.id}">.${esc(it.ext)}</div>`}
+async function fillDocTexts(){for(const d of $$(".doc[data-text]")){const id=d.dataset.text;d.removeAttribute("data-text");try{const t=await api("/api/text?id="+id);if(t.text)d.textContent=t.text.slice(0,900)}catch(e){}}}
+new MutationObserver(()=>fillDocTexts()).observe($("#dupBody"),{childList:true,subtree:true});
+function pathsFor(g){const out=[];g.items.forEach(it=>{const key=g.type==="folders"?it.path:it.id;if(g.mark[key]==="del")out.push(g.type==="folders"?it.path:(it.base+sepOf(it.base)+it.rel))});return out}
+async function applyGroup(g){const p=pathsFor(g);if(!p.length)return;
+  if(!await confirmBox(`Delete ${p.length} item${p.length>1?"s":""}?`,`They go to the ${BIN}, so you can still restore them from there.`,`Move to ${BIN}`))return;
+  const r=await api("/api/delete",{paths:p});toast(`Moved ${r.deleted.length} to the ${BIN}${r.errors.length?`, ${r.errors.length} couldn't be (open in another app?)`:""}.`);loadDupes()}
+$("#dupBulk").onclick=async()=>{const gs=DUP.byTab[DTAB].filter(g=>Object.values(g.mark).includes("keep"));const p=gs.flatMap(pathsFor);if(!p.length)return;
+  if(!await confirmBox(`Delete ${p.length} duplicate${p.length>1?"s":""} on this tab?`,`Each set keeps the copy marked Keep. Everything else goes to the ${BIN}.`,`Move to ${BIN}`))return;
+  const r=await api("/api/delete",{paths:p});toast(`Moved ${r.deleted.length} to the ${BIN}.`);loadDupes()};
+
+/* ---------------- activity ---------------- */
+async function loadActivity(){const [h,a]=await Promise.all([api("/api/history"),api("/api/activity")]);
+  const auto=a.filter(x=>x.kind==="filed").slice(0,30);
+  $("#actBody").innerHTML=(auto.length?`<div class="sec-h"><h2>Sorted automatically</h2></div>`+auto.map(x=>`<div class="act"><span class="dot">↓</span><div>${esc(x.text)}<br><small>${ago(x.ts)}</small></div><span></span></div>`).join(""):"")+
+   `<div class="sec-h"><h2>Changes</h2></div>`+(h.length?h.map(b=>`<div class="act"><span class="dot">${b.label.startsWith("Sent")?"🗑":"⇢"}</span><div><b>${esc(b.label)}</b>: ${b.n} item${b.n>1?"s":""}<br><small>${ago(b.ts)} · ${esc(b.sample.map(s=>s.from.split(/[\\/]/).pop()).join(", "))}${b.n>b.sample.length?"…":""}</small></div>
+   ${b.undone?`<small>Undone</small>`:b.undoable?`<button class="btn sm" data-u="${b.batch}">Undo</button>`:`<small>Restore from the ${BIN}</small>`}</div>`).join(""):`<div class="empty-desk">Nothing has changed yet.</div>`);
+  $$("[data-u]").forEach(b=>b.onclick=async()=>{const r=await api("/api/undo",{batch:b.dataset.u});toast(`Put ${r.reverted} item${r.reverted===1?"":"s"} back.`);loadActivity();loadFolders()})}
+
+/* ---------------- settings ---------------- */
+async function loadSettings(){const s=await api("/api/settings");$("#ver").textContent="SortWise "+s.version;$("#sStart").checked=s.start_with_windows;$("#sMin").value=s.min_group;
+  $("#sFolders").innerHTML=FOLDERS.map(f=>`<div class="row" style="align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><div style="flex:1"><b>${esc(f.name)}</b><div class="hint">${esc(f.path)}</div></div><button class="btn sm" data-dc="${esc(f.path)}">Disconnect</button></div>`).join("")||`<p class="hint">None yet.</p>`;
+  $$("#sFolders [data-dc]").forEach(b=>b.onclick=()=>disconnectFolder(b.dataset.dc))}
+$("#sStart").onchange=async e=>{try{await api("/api/settings",{start_with_windows:e.target.checked});toast(e.target.checked?"SortWise will start when you sign in.":"SortWise won't start by itself.")}catch(er){toast(er.message);e.target.checked=false}};
+$("#sMin").onchange=e=>api("/api/settings",{min_group:+e.target.value});
+$("#quitBtn").onclick=async()=>{if(!await confirmBox("Quit SortWise?","Your folders stop being sorted until you open SortWise again.","Quit"))return;await api("/api/quit",{});document.body.innerHTML=`<div class="welcome" style="padding:40px"><h1>SortWise has stopped.</h1><p>Open SortWise again from the Start menu or Applications to carry on.</p></div>`};
+
+/* ---------------- about ---------------- */
+async function loadAbout(){const s=await api("/api/settings");$("#aboutVer").textContent="Version "+s.version;
+  $("#aboutBuild").textContent=s.build==="dev"?"Running from source":`Build ${s.build} (${s.build_label})`;
+  renderUpdate(await api("/api/update"));
+  $("#aboutData").textContent=`SortWise keeps its index and settings on this computer only. ${FOLDERS.length} folder${FOLDERS.length===1?"":"s"} connected.`}
+document.addEventListener("click",e=>{const l=e.target.closest("[data-url]");if(l)api("/api/openurl",{url:l.dataset.url}).catch(()=>window.open(l.dataset.url,"_blank","noopener"))});
+$("#main").addEventListener("scroll",()=>{const b=$("#dupBar");if(b)b.classList.toggle("stuck",b.getBoundingClientRect().top<=1&&VIEW==="dupes")});
+
+/* ---------------- updates ---------------- */
+let updTimer=null;
+function renderUpdate(u){
+  const L=u.latest, card=$("#updCard"), btn=$("#updBtn");card.classList.toggle("new",u.state==="available");
+  $("#updProg").hidden=!["downloading","installing"].includes(u.state);$("#updBar").style.width=(u.progress||0)+"%";
+  $("#updN").hidden=u.state!=="available";
+  btn.hidden=false;btn.disabled=false;
+  if(u.kind==="source"){$("#updTitle").textContent="Updates";$("#updText").textContent="You're running SortWise from its source code. Get the installed app from GitHub to receive updates here.";btn.textContent="Open GitHub";btn.onclick=()=>api("/api/openurl",{url:"https://github.com/theganeshlife/SortWise/releases/latest"});return}
+  if(u.state==="checking"){$("#updTitle").textContent="Checking for updates…";btn.disabled=true;return}
+  if(u.state==="available"){$("#updTitle").textContent=`A new build is ready: ${L.build}`;$("#updText").textContent=`Released ${L.label}. Your folders and settings stay exactly as they are.`;btn.textContent="Update now";btn.className="btn go";btn.onclick=startUpdate;return}
+  if(u.state==="downloading"){$("#updTitle").textContent=`Downloading build ${L.build}… ${u.progress}%`;btn.hidden=true;return}
+  if(u.state==="installing"){$("#updTitle").textContent="Installing the update";$("#updText").textContent="SortWise will close and reopen by itself in a few seconds.";btn.hidden=true;return}
+  if(u.state==="manual"){$("#updTitle").textContent="A new build is out";$("#updText").textContent=u.message;btn.textContent="Open GitHub";btn.onclick=()=>api("/api/openurl",{url:L.url||"https://github.com/theganeshlife/SortWise/releases/latest"});return}
+  if(u.state==="error"){$("#updTitle").textContent="Couldn't check for updates";$("#updText").textContent=u.message;}
+  else if(u.state==="none"){$("#updTitle").textContent="SortWise is up to date";$("#updText").textContent=`This is the latest build${L&&L.build?` (${L.build})`:""}. Checked ${ago(u.checked)}.`}
+  btn.className="btn";btn.textContent="Check for updates";btn.onclick=checkUpdate}
+async function checkUpdate(){renderUpdate({state:"checking",kind:"app"});renderUpdate(await api("/api/update/check",{}))}
+async function startUpdate(){await api("/api/update/install",{});clearInterval(updTimer);
+  updTimer=setInterval(async()=>{try{const u=await api("/api/update");renderUpdate(u)}catch(e){$("#updTitle").textContent="Installing the update";$("#updText").textContent="SortWise is restarting. This page reconnects when it's back.";
+    try{const r=await fetch("/api/hello");if(r.ok){clearInterval(updTimer);setTimeout(()=>location.reload(),800)}}catch(_){}}},1000)}
+
+/* ---------------- live events from the watcher ---------------- */
+let lastEv=0;
+async function poll(){try{const r=await api("/api/events?after="+lastEv);
+  $("#scanline").textContent=r.state.scanning?(r.state.progress||"Indexing…"):"";
+  const filed=lastEv?r.events.filter(e=>e.kind==="filed"):[];
+  if(filed.length){const batches=[...new Set(filed.map(e=>e.batch))];const nf=new Set(filed.filter(e=>e.new_folder).map(e=>e.dest));
+    const msg=filed.length===1?`${filed[0].name} sorted into ${filed[0].dest.split(/[\\/]/).join(" › ")}${nf.size?" (new folder)":""}`:
+      `${filed.length} new files sorted${nf.size?`, ${nf.size} new folder${nf.size>1?"s":""} made`:""}`;
+    toast(msg,[["Undo",async()=>{for(const b of batches)await api("/api/undo",{batch:b});refreshView();loadFolders()}]]);
+    if(VIEW==="folder"&&filed.some(e=>e.base===CUR.base)&&!BUSY)refreshView()}
+  if(r.events.length){const had=lastEv;lastEv=r.events[r.events.length-1].id;if(had)loadFolders()}
+  if(!lastEv)lastEv=-1}catch(e){$("#scanline").textContent="SortWise isn't running. Open it again to carry on."}}
+setInterval(poll,2000);
+
+/* ---------------- start ---------------- */
+(async()=>{const r=await loadFolders();poll();api("/api/settings").then(s=>$("#ver").textContent=`SortWise ${s.version}${s.build!=="dev"?" · build "+s.build:""}`).catch(()=>{});
+  setInterval(()=>api("/api/update").then(u=>$("#updN").hidden=u.state!=="available").catch(()=>{}),60000);
+  show("home");
+  api("/api/duplicates").then(d=>{const n=d.files.length+d.folders.length;$("#dupN").hidden=!n;$("#dupN").textContent=n}).catch(()=>{});
+  setInterval(()=>{if(!BUSY)loadFolders()},15000)})();
+</script>
+</body>
+</html>
